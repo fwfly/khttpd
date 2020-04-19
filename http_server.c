@@ -1,11 +1,13 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include "http_server.h"
+
 #include <linux/kthread.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
 
+#include "fib.c"
 #include "http_parser.h"
-#include "http_server.h"
 
 #define CRLF "\r\n"
 
@@ -73,11 +75,18 @@ static int http_server_send(struct socket *sock, const char *buf, size_t size)
     return done;
 }
 
+
+
 static int http_server_response(struct http_request *request, int keep_alive)
 {
     char *response;
 
     pr_info("requested_url = %s\n", request->request_url);
+
+    // calculate fib res.
+    char fib_res[100];
+    get_fib(fib_res, request->request_url);
+
     if (request->method != HTTP_GET)
         response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE : HTTP_RESPONSE_501;
     else
