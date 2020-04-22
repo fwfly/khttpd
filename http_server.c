@@ -75,17 +75,25 @@ static int http_server_send(struct socket *sock, const char *buf, size_t size)
     return done;
 }
 
-
+static int is_fiburl(char *request)
+{
+    int len = strlen(request);
+    if (len > 5 && *(request + 5) > 47 && *(request + 5) < 58)
+        return 1;
+    return 0;
+}
 
 static int http_server_response(struct http_request *request, int keep_alive)
 {
     char *response;
 
-    pr_info("requested_url = %s\n", request->request_url);
-
-    // calculate fib res.
-    char fib_res[100];
-    get_fib(fib_res, request->request_url);
+    char res = is_fiburl(request->request_url);
+    if (res) {
+        char fibres[39] = "0";
+        get_fib(fibres, request->request_url);
+        printk("%s : %s", request->request_url, fibres);
+    } else
+        printk("No fib num");
 
     if (request->method != HTTP_GET)
         response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE : HTTP_RESPONSE_501;

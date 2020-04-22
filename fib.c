@@ -109,12 +109,11 @@ static void BigN_to_int(struct BigN *res, struct BigN x)
 }
 
 
-static long long fast_fib_sequence(long long k)
+static long long fast_fib_sequence(struct BigN *res, long long k)
 {
     struct BigN a, b, b2, t1, t2, t2a;
     int numbits = num_bits(k);
     int count = numbits;
-    struct BigN res;
 
     a.upper = 0;
     a.lower = 0;
@@ -154,28 +153,75 @@ static long long fast_fib_sequence(long long k)
         count--;
     }
 
-    res.upper = 0;
-    res.lower = 0;
-    BigN_to_int(&res, a);
-    /*if (res.upper)
-        printk("%lld: %lld %lld\n", k, res.upper, res.lower);
-    else
-        printk("%lld: %lld\n", k, res.lower); */
+    res->upper = a.upper;
+    res->lower = a.lower;
     return a.lower;
 }
 
-static long long fib_ktime_proxy(long long k)
+static void fib_ktime_proxy(struct BigN *res, long long k)
 {
     // kt = ktime_get();
-    long long result = fast_fib_sequence(k);
+    fast_fib_sequence(res, k);
     // kt = ktime_sub(ktime_get(), kt);
-    return result;
+}
+
+static void fib_strrev(unsigned char *str)
+{
+    int i;
+    int j;
+    unsigned len = strlen((const char *) str);
+    for (i = 0, j = len - 1; i < j; i++, j--) {
+        unsigned char a;
+        a = str[i];
+        str[i] = str[j];
+        str[j] = a;
+    }
+}
+
+static void BigN_to_String(char *str_res, struct BigN *bn)
+{
+    struct BigN int_bn;
+    int_bn.upper = 0;
+    int_bn.lower = 0;
+    BigN_to_int(&int_bn, *bn);
+    // BigN to  String
+    int i = 0;
+
+    if (bn->upper == 0 && bn->lower == 0) {
+        str_res[0] = '0';
+        str_res[1] = '\0';
+    } else {
+
+        int digit;
+        while (int_bn.lower) {
+            digit = int_bn.lower % 10;
+            str_res[i++] = '0' + digit;
+            int_bn.lower = int_bn.lower / 10;
+        }
+
+        while (int_bn.upper) {
+            digit = int_bn.upper % 10;
+            str_res[i++] = '0' + digit;
+            int_bn.lower = int_bn.upper / 10;
+        }
+    }
+    str_res[i] = '\0';
+    fib_strrev(str_res);
+    return 0;
 }
 
 static void get_fib(char *res, char *k)
 {
     // string to int
-    printk("get_fib %s", k + 5);
-    // calculate fib
+    unsigned long long nk = 0;
+    struct BigN res_bn;
+    res_bn.upper = 0;
+    res_bn.lower = 0;
+    if (!kstrtoull(k + 5, 0, &nk)) {
+        // calculate fib
+        fib_ktime_proxy(&res_bn, nk);
+    }
     // bigN to string
+    BigN_to_String(res, &res_bn);
+    printk("get_gib_res : %s", res);
 }
