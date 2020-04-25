@@ -11,16 +11,14 @@
 
 #define CRLF "\r\n"
 
-#define HTTP_RESPONSE_200_DUMMY                               \
-    ""                                                        \
-    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
-    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
-    "Connection: Close" CRLF CRLF "Hello World!" CRLF
-#define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                     \
-    ""                                                        \
-    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
-    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
-    "Connection: Keep-Alive" CRLF CRLF "Hello World!" CRLF
+#define HTTP_RESPONSE_200_DUMMY                           \
+    ""                                                    \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF \
+    "Content-Type: text/plain" CRLF "Connection: Close" CRLF
+#define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                 \
+    ""                                                    \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF \
+    "Content-Type: text/plain" CRLF "Connection: Keep-Alive" CRLF
 #define HTTP_RESPONSE_501                                              \
     ""                                                                 \
     "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
@@ -86,20 +84,26 @@ static int is_fiburl(char *request)
 static int http_server_response(struct http_request *request, int keep_alive)
 {
     char *response;
+    char response_with_ans[300] = "\n";
 
     char res = is_fiburl(request->request_url);
-    if (res) {
-        char fibres[39] = "0";
+    char fibres[39] = "0";
+    if (res)
         get_fib(fibres, request->request_url);
-        printk("%s : %s", request->request_url, fibres);
-    } else
-        printk("No fib num");
 
-    if (request->method != HTTP_GET)
+    if (request->method != HTTP_GET) {
         response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE : HTTP_RESPONSE_501;
-    else
-        response = keep_alive ? HTTP_RESPONSE_200_KEEPALIVE_DUMMY
-                              : HTTP_RESPONSE_200_DUMMY;
+    } else {
+        char *hdr = keep_alive ? HTTP_RESPONSE_200_KEEPALIVE_DUMMY
+                               : HTTP_RESPONSE_200_DUMMY;
+
+        // Count lenth of fibres
+        int len_fibres_int = strlen(fibres);
+        // use snprintf to concat the result string
+        snprintf(response_with_ans, 300, "%sContent-Length: %d\r\n\r\n%s\r\n",
+                 hdr, len_fibres_int, fibres);
+        response = response_with_ans;
+    }
     http_server_send(request->socket, response, strlen(response));
     return 0;
 }
